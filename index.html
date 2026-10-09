@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>RitmoStyle</title>
+    <meta name="description" content="A small browser rhythm game with procedural beats.">
+    <link rel="icon" href="assets/ritmostyle-icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="styles.css">
+    <script src="game.js" defer></script>
+  </head>
+  <body>
+    <main class="game-app">
+      <header class="topbar" aria-label="Game status">
+        <div class="brand">
+          <img src="assets/ritmostyle-icon.svg" alt="" width="44" height="44">
+          <div>
+            <h1>RitmoStyle</h1>
+            <p id="track-name">Neon clave</p>
+          </div>
+        </div>
+
+        <section class="stats" aria-label="Scoreboard">
+          <div>
+            <span>Score</span>
+            <strong id="score">0</strong>
+          </div>
+          <div>
+            <span>Combo</span>
+            <strong id="combo">0</strong>
+          </div>
+          <div>
+            <span>Best</span>
+            <strong id="best">0</strong>
+          </div>
+          <div>
+            <span>Grade</span>
+            <strong id="grade">--</strong>
+          </div>
+        </section>
+      </header>
+
+      <section class="stage" aria-label="Rhythm game">
+        <canvas id="game-canvas" width="980" height="680" aria-label="RitmoStyle playfield"></canvas>
+        <div class="hit-flash" id="hit-flash" aria-hidden="true"></div>
+        <p class="judgement" id="judgement" aria-live="polite">Ready</p>
+      </section>
+
+      <section class="controls" aria-label="Game controls">
+        <div class="difficulty" role="group" aria-label="Difficulty">
+          <button class="difficulty-button is-active" type="button" data-difficulty="chill">Chill</button>
+          <button class="difficulty-button" type="button" data-difficulty="metro">Metro</button>
+          <button class="difficulty-button" type="button" data-difficulty="rush">Rush</button>
+        </div>
+
+        <div class="actions">
+          <button id="start-button" class="primary-button" type="button">Start</button>
+          <button id="pause-button" type="button" disabled>Pause</button>
+        </div>
+      </section>
+
+      <section class="pads" aria-label="Hit pads">
+        <button type="button" data-lane="0"><span>D</span></button>
+        <button type="button" data-lane="1"><span>F</span></button>
+        <button type="button" data-lane="2"><span>J</span></button>
+        <button type="button" data-lane="3"><span>K</span></button>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "ritmostyle",
+  "version": "1.0.0",
+  "description": "A small browser rhythm game with procedural beats.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "test": "node --check game.js && node --check scripts/serve.mjs && node --check scripts/smoke-test.mjs && node scripts/smoke-test.mjs"
+  }
+}
