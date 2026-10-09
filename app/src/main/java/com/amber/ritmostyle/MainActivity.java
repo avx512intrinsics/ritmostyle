@@ -9,6 +9,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowInsets;
@@ -24,6 +25,8 @@ import com.amber.ritmostyle.ui.RitmoGameView;
 import java.util.List;
 
 public final class MainActivity extends Activity implements RitmoGameView.Host {
+    private static final String TAG = "RitmoMain";
+
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     private VideoView videoView;
@@ -123,6 +126,13 @@ public final class MainActivity extends Activity implements RitmoGameView.Host {
         cancelPreviewStopper();
         currentLevel = level;
         Uri uri = Uri.parse("android.resource://" + getPackageName() + "/" + level.videoResId);
+        videoView.setOnErrorListener(new MediaPlayer.OnErrorListener() {
+            @Override
+            public boolean onError(MediaPlayer mediaPlayer, int what, int extra) {
+                Log.w(TAG, "Video playback failed: " + what + "/" + extra);
+                return true;
+            }
+        });
         videoView.stopPlayback();
         videoView.setVideoURI(uri);
         videoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
