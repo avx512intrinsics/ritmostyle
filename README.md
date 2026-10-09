@@ -11,5 +11,4 @@ Native Android rhythm game prototype.
 - Touch-driven sword physics and blade-only word cuts.
 - Score scaled to a 1,000,000 maximum.
 
-The first level is Bad Apple. If the external video download is unavailable, the
-build uses a generated placeholder video while keeping the same level and LRC path.
+The first level is Bad Apple, backed by the real PV video and the embedded LRC path.
