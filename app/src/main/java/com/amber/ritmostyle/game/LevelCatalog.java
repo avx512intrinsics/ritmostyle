@@ -17,7 +17,8 @@ public final class LevelCatalog {
                 "Alstroemeria Records / nomico",
                 R.raw.bad_apple_video,
                 R.raw.bad_apple_lrc,
-                44000
+                44000,
+                219_183
         ));
         return levels;
     }

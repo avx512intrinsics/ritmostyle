@@ -9,6 +9,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.View;
 import android.view.Window;
@@ -31,8 +32,13 @@ public final class MainActivity extends Activity implements RitmoGameView.Host {
 
     private VideoView videoView;
     private RitmoGameView gameView;
-    private Runnable previewStopper;
+    private Runnable fallbackCompletion;
     private Level currentLevel;
+    private boolean fallbackPlayheadActive;
+    private boolean videoSourceActive;
+    private long fallbackStartUptimeMs;
+    private int fallbackStartPositionMs;
+    private int fallbackDurationMs;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,6 +53,7 @@ public final class MainActivity extends Activity implements RitmoGameView.Host {
 
         videoView = new VideoView(this);
         videoView.setBackgroundColor(Color.BLACK);
+        videoView.setVisibility(View.INVISIBLE);
         root.addView(videoView, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
@@ -62,16 +69,29 @@ public final class MainActivity extends Activity implements RitmoGameView.Host {
         ));
 
         setContentView(root);
-        playMenuBackground(currentLevel);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         hideSystemUi();
-        if (videoView != null && !videoView.isPlaying()) {
+        if (videoView != null && videoSourceActive && !fallbackPlayheadActive && !videoView.isPlaying()) {
             videoView.start();
         }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (videoView != null && videoSourceActive && !fallbackPlayheadActive && videoView.isPlaying()) {
+            videoView.pause();
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        stopVideoPlayback();
+        super.onDestroy();
     }
 
     @Override
@@ -84,22 +104,12 @@ public final class MainActivity extends Activity implements RitmoGameView.Host {
 
     @Override
     public void playMenuBackground(Level level) {
-        playVideo(level, true, 0, 0.7f, false);
+        showStaticBackdrop(level);
     }
 
     @Override
     public void playLevelPreview(Level level) {
-        currentLevel = level;
-        playVideo(level, false, level.previewStartMs, 0.65f, false);
-        previewStopper = new Runnable() {
-            @Override
-            public void run() {
-                if (gameView != null && gameView.isSelectingLevel() && currentLevel == level) {
-                    videoView.pause();
-                }
-            }
-        };
-        handler.postDelayed(previewStopper, 5000L);
+        showStaticBackdrop(level);
     }
 
     @Override
@@ -109,35 +119,56 @@ public final class MainActivity extends Activity implements RitmoGameView.Host {
 
     @Override
     public void playEndLoop(Level level) {
-        playVideo(level, true, 0, 0.55f, false);
+        showStaticBackdrop(level);
     }
 
     @Override
     public int currentVideoPositionMs() {
+        if (fallbackPlayheadActive) {
+            return fallbackVideoPositionMs();
+        }
         return videoView == null ? 0 : videoView.getCurrentPosition();
     }
 
     @Override
     public int videoDurationMs() {
-        return videoView == null ? 0 : videoView.getDuration();
+        if (fallbackPlayheadActive) {
+            return fallbackDurationMs;
+        }
+        if (videoView == null) {
+            return currentLevel == null ? 0 : currentLevel.durationMs;
+        }
+        int duration = videoView.getDuration();
+        if (duration > 0) {
+            return duration;
+        }
+        return currentLevel == null ? 0 : currentLevel.durationMs;
     }
 
     private void playVideo(Level level, boolean loop, int startMs, float volume, boolean notifyGameCompletion) {
-        cancelPreviewStopper();
+        stopVideoPlayback();
         currentLevel = level;
+        if (!shouldUsePlatformVideo()) {
+            Log.i(TAG, "Using timer fallback instead of platform video playback");
+            startFallbackPlayhead(level, startMs, loop, notifyGameCompletion);
+            return;
+        }
         Uri uri = Uri.parse("android.resource://" + getPackageName() + "/" + level.videoResId);
+        videoSourceActive = true;
+        videoView.setVisibility(View.VISIBLE);
         videoView.setOnErrorListener(new MediaPlayer.OnErrorListener() {
             @Override
             public boolean onError(MediaPlayer mediaPlayer, int what, int extra) {
                 Log.w(TAG, "Video playback failed: " + what + "/" + extra);
+                startFallbackPlayhead(level, startMs, loop, notifyGameCompletion);
                 return true;
             }
         });
-        videoView.stopPlayback();
-        videoView.setVideoURI(uri);
         videoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
             @Override
             public void onPrepared(MediaPlayer mediaPlayer) {
+                fallbackPlayheadActive = false;
+                cancelFallbackCompletion();
                 mediaPlayer.setLooping(loop);
                 mediaPlayer.setVolume(volume, volume);
                 if (startMs > 0) {
@@ -154,13 +185,68 @@ public final class MainActivity extends Activity implements RitmoGameView.Host {
                 }
             }
         });
+        videoView.setVideoURI(uri);
     }
 
-    private void cancelPreviewStopper() {
-        if (previewStopper != null) {
-            handler.removeCallbacks(previewStopper);
-            previewStopper = null;
+    private void showStaticBackdrop(Level level) {
+        currentLevel = level;
+        stopVideoPlayback();
+    }
+
+    private void stopVideoPlayback() {
+        videoSourceActive = false;
+        fallbackPlayheadActive = false;
+        cancelFallbackCompletion();
+        if (videoView == null) {
+            return;
         }
+        videoView.setOnErrorListener(null);
+        videoView.setOnPreparedListener(null);
+        videoView.setOnCompletionListener(null);
+        videoView.stopPlayback();
+        videoView.setVisibility(View.INVISIBLE);
+    }
+
+    private static boolean shouldUsePlatformVideo() {
+        return Build.VERSION.SDK_INT > Build.VERSION_CODES.M;
+    }
+
+    private void startFallbackPlayhead(Level level, int startMs, boolean loop, boolean notifyGameCompletion) {
+        videoSourceActive = false;
+        fallbackPlayheadActive = true;
+        fallbackStartUptimeMs = SystemClock.uptimeMillis();
+        fallbackStartPositionMs = clamp(startMs, 0, level.durationMs);
+        fallbackDurationMs = level.durationMs;
+        if (videoView != null) {
+            videoView.setVisibility(View.INVISIBLE);
+        }
+        if (notifyGameCompletion && gameView != null && !loop) {
+            fallbackCompletion = new Runnable() {
+                @Override
+                public void run() {
+                    if (fallbackPlayheadActive && currentLevel == level && gameView != null) {
+                        gameView.onVideoCompleted();
+                    }
+                }
+            };
+            handler.postDelayed(fallbackCompletion, Math.max(0, level.durationMs - fallbackStartPositionMs));
+        }
+    }
+
+    private int fallbackVideoPositionMs() {
+        long elapsedMs = SystemClock.uptimeMillis() - fallbackStartUptimeMs;
+        return clamp((int) Math.min(Integer.MAX_VALUE, fallbackStartPositionMs + elapsedMs), 0, fallbackDurationMs);
+    }
+
+    private void cancelFallbackCompletion() {
+        if (fallbackCompletion != null) {
+            handler.removeCallbacks(fallbackCompletion);
+            fallbackCompletion = null;
+        }
+    }
+
+    private static int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     private void hideSystemUi() {

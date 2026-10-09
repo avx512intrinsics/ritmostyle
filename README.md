@@ -5,7 +5,8 @@ Native Android rhythm game prototype.
 ## Features
 
 - Landscape-only fullscreen immersive presentation.
-- Video-backed menu and level selector.
+- Static startup, menu, and selector screens that avoid device video decoders until gameplay starts.
+- Video-backed gameplay on supported Android versions with a timer fallback for older or failed platform media playback.
 - Disk-style level selector with touch spinning.
 - LRC-driven word targets with deterministic positions.
 - Touch-driven sword physics and blade-only word cuts.
