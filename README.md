@@ -1,29 +1,15 @@
-# RitmoStyle
+# ritmostyle
 
-RitmoStyle is a small browser rhythm game built with plain HTML, CSS, Canvas, and Web Audio. Notes fall through four lanes; hit them on the beat to build combo and score.
+Native Android rhythm game prototype.
 
-## Run
+## Features
 
-```bash
-npm start
-```
+- Landscape-only fullscreen immersive presentation.
+- Video-backed menu and level selector.
+- Disk-style level selector with touch spinning.
+- LRC-driven word targets with deterministic positions.
+- Touch-driven sword physics and blade-only word cuts.
+- Score scaled to a 1,000,000 maximum.
 
-Then open the local URL printed by the server.
-
-The game can also be opened directly from `index.html` in a browser, though the local server is the most reliable option.
-
-## Controls
-
-- `D`, `F`, `J`, `K`: hit the four lanes
-- `Space`: pause or resume
-- `Enter`: start or restart
-
-Touch and mouse controls are available through the four pads below the playfield.
-
-## Validate
-
-```bash
-npm test
-```
-
-The validation script checks JavaScript syntax and verifies that the static game files contain the expected app surface.
+The first level is Bad Apple. If the external video download is unavailable, the
+build uses a generated placeholder video while keeping the same level and LRC path.
